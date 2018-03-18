@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>旋转合并的照片墙</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+
+    #container {
+      position: absolute;
+      left: 0;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      background: url(img/bg.jpg);
+    }
+
+    #container .img {
+      width: 125px;
+      height: 125px;
+      border: 6px solid #fff;
+      -webkit-box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.7);
+      -moz-box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.7);
+      -o-box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.7);
+      box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.7);
+      position: absolute;
+      left: -200px;
+      top: -200px;
+      cursor: pointer;
+      -webkit-transition: all 1.5s ease-out;
+      -moz-transition: all 1.5s ease-out;
+      -o-transition: all 1.5s ease-out;
+      transition: all 1.5s ease-out;
+    }
+
+    #container .img span {
+      display: block;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      -webkit-transition: opacity 1.5s ease-out;
+      -moz-transition: opacity 1.5s ease-out;
+      -o-transition: opacity 1.5s ease-out;
+      transition: opacity 1.5s ease-out;
+    }
+
+    .arrow {
+      width: 60px;
+      height: 60px;
+      position: absolute;
+      top: 50%;
+      margin-top: -30px;
+      box-shadow: 0 0 1px rgba(0, 0, 0, 0.7);
+      z-index: 1;
+      border: 1px solid #999;
+      display: none;
+      cursor: pointer;
+      opacity: 0.6;
+      -webkit-transition: 0.7s all ease;
+      -moz-transition: 0.7s all ease;
+      -o-transition: 0.7s all ease;
+      transition: 0.7s all ease;
+    }
+
+    #prev {
+      background: #fff url(img/prev.png) no-repeat center;
+      border-radius: 0 8px 8px 0;
+      left: -20px;
+    }
+
+    #prev:hover {
+      left: 0;
+      opacity: 1;
+    }
+
+    #next {
+      background: #fff url(img/next.png) no-repeat center;
+      border-radius: 8px 0 0 8px;
+      right: -20px;
+    }
+
+    #next:hover {
+      right: 0;
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+<div id="container"></div>
+<div id="prev" class="arrow"></div>
+<div id="next" class="arrow"></div>
+<script>
+  window.onload = function () {
+    var container = document.getElementById('container'); // 容器
+    var btnPrev = document.getElementById('prev'), btnNext = document.getElementById('next'); // 上一张，下一张
+    var ROW = 4, COL = 6, NUM = ROW * COL, BIG_IMG_WIDTH = 750, BIG_IMG_HEIGHT = 500,
+      THUMB_IMG_WIDTH = 125, THUMB_IMG_HEIGHT = 125;
+    var isClicked = false;
+    var current = 0;
+    var loadedCount = 0; // 加载完成的图片数量，当此数值为2*NUM时全部加载完成
+    for (var i = 1; i <= NUM; i++) {
+      // 加载大图
+      var bigImg = new Image();
+      bigImg.src = 'img/' + i + '.jpg';
+      bigImg.onload = function () {
+        loadedCount++;
+        if (loadedCount === NUM * 2) {
+          loaded();
+        }
+      };
+      // 加载缩略图
+      var thumbImg = new Image();
+      thumbImg.src = 'img/thumbs/' + i + '.jpg';
+      thumbImg.onload = function () {
+        loadedCount++;
+        if (loadedCount === NUM * 2) {
+          loaded();
+        }
+      };
+    }
+
+    // 全部图片加载完毕，创建div
+    function loaded() {
+      var index = 0;
+      // 获取缩略图位置
+      var colGap = (container.offsetWidth - THUMB_IMG_WIDTH * COL) / (COL + 1),
+        rowGap = (container.offsetHeight - THUMB_IMG_HEIGHT * ROW) / (ROW + 1);
+      // 获取大图位置
+      var collapseLeft = (container.offsetWidth - BIG_IMG_WIDTH) / 2,
+        collapseTop = (container.offsetHeight - BIG_IMG_HEIGHT) / 2;
+      for (var i = 0; i < ROW; i++) {
+        for (var j = 0; j < COL; j++) {
+          var div = document.createElement('div');
+          div.index = index;
+          div.className = 'img';
+          index++;
+          div.style.backgroundImage = 'url(img/thumbs/' + index + '.jpg)';
+          div.innerHTML = '<span></span>';
+          // 随机旋转
+          transform(div, 'transform', 'rotate(' + (Math.random() * 40 - 20) + 'deg)');
+          div.col = j;
+          div.row = i;
+          div.pos = {
+            left: colGap + j * (colGap + THUMB_IMG_WIDTH),
+            top: rowGap + i * (rowGap + THUMB_IMG_HEIGHT)
+          };
+          div.onclick = clickHandler;
+          container.appendChild(div);
+          locate(div, div.pos.left, div.pos.top, true);
+        }
+      }
+
+      function clickHandler() {
+        current = this.index;
+        var isDelay = false; // 是否在做动画
+        var divs = container.children;
+        var i;
+        var span;
+        if (!isDelay) {
+          isDelay = true;
+          if (isClicked) {
+            for (i = 0; i < divs.length; i++) {
+              locate(divs[i], divs[i].pos.left, divs[i].pos.top);
+              transform(divs[i], 'transform', 'rotate(' + (Math.random() * 40 - 20) + 'deg)');
+              divs[i].style.border = '6px solid #fff';
+              span = divs[i].children[0];
+              span.style.opacity = '0';
+            }
+            btnPrev.style.display = btnNext.style.display = 'none';
+          } else {
+            var imgUrl = 'img/' + (this.index + 1) + '.jpg';
+            for (i = 0; i < NUM; i++) {
+              locate(divs[i], collapseLeft + divs[i].col * THUMB_IMG_WIDTH, collapseTop + divs[i].row * THUMB_IMG_HEIGHT);
+              transform(divs[i], 'transform', 'rotate(0deg)');
+              divs[i].style.border = '1px solid #fff';
+              // 在span中显示大图，利用backgroundPosition控制显示区域，利用opacity控制显隐
+              span = divs[i].children[0];
+              span.style.backgroundImage = 'url(' + imgUrl + ')';
+              span.style.backgroundPosition = (-divs[i].col * THUMB_IMG_WIDTH) + 'px ' + (-divs[i].row * THUMB_IMG_HEIGHT) + 'px';
+              span.style.opacity = '1';
+            }
+            // 显示翻页按钮
+            btnPrev.style.display = btnNext.style.display = 'block';
+          }
+          setTimeout(function () {
+            isDelay = false;
+          }, 1500);
+          isClicked = !isClicked;
+        }
+      }
+
+      // 定位元素
+      function locate(elem, left, top, delay) {
+        if (delay) {
+          // 不同图片设置不同延时
+          setTimeout(function () {
+            elem.style.left = left + 'px';
+            elem.style.top = top + 'px';
+          }, (NUM - index) * 100);
+        } else {
+          elem.style.left = left + 'px';
+          elem.style.top = top + 'px';
+        }
+      }
+    }
+
+    // 添加前缀
+    function transform(elem, attr, value) {
+      ['Webkit', 'Moz', 'O', ''].forEach(function (prefix) {
+        elem.style[prefix + attr.charAt(0).toUpperCase() + attr.substr(1)] = value;
+      });
+    }
+
+    btnPrev.onclick = btnNext.onclick = function () {
+      if (this === btnPrev) {
+        current = --current === -1 ? NUM - 1 : current;
+      } else {
+        current = ++current === NUM ? 0 : current;
+      }
+      // 生产0-23随机数
+      var arr = [];
+      while (arr.length < NUM) {
+        var randomNum = parseInt(Math.random() * 24);
+        var isStored = false;
+        for (var i = 0; i < arr.length; i++) {
+          if (arr[i] === randomNum) {
+            isStored = true;
+            break;
+          }
+        }
+        if (!isStored) {
+          arr.push(randomNum);
+        }
+      }
+      var divs = container.children;
+      var index = 0;
+      var timer = setInterval(function () {
+        index++;
+        if (index === NUM) {
+          clearInterval(timer);
+        }
+        var div = divs[arr[index - 1]];
+        var span = div.children[0];
+        span.style.backgroundImage = 'url(img/' + (current + 1) + '.jpg)';
+        span.style.backgroundPosition = (-div.col * THUMB_IMG_WIDTH) + 'px ' + (-div.row * THUMB_IMG_HEIGHT) + 'px';
+      }, 30);
+    };
+  }
+</script>
+</body>
+</html>
